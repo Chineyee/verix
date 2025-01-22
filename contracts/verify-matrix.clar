@@ -1,12 +1,9 @@
 ;; Verix - Decentralized Identity System
-;; A system for managing verified digital identities on Stacks blockchain
-
 (define-constant ERR-NOT-FOUND (err u404))
 (define-constant ERR-UNAUTHORIZED (err u401))
 (define-constant ERR-EXPIRED (err u410))
 (define-constant ERR-INVALID-INPUT (err u400))
 
-;; Data Maps
 (define-map identities 
     principal 
     { name: (string-utf8 50),
@@ -24,7 +21,6 @@
       expiration: uint,
       proof: (string-utf8 500) })
 
-;; Public Functions
 (define-public (create-identity (name (string-utf8 50)) 
                               (bio (string-utf8 280))
                               (avatar (optional (string-utf8 256))))
@@ -45,28 +41,28 @@
 (define-public (update-identity (name (string-utf8 50))
                               (bio (string-utf8 280))
                               (avatar (optional (string-utf8 256))))
-    (let ((existing-identity (get-identity tx-sender)))
-        (match existing-identity
-            identity (begin
-                (map-set identities tx-sender
-                    (merge identity
-                        { name: name,
-                          bio: bio,
-                          avatar: avatar,
-                          updated-at: block-height }))
-                (ok true))
-            ERR-NOT-FOUND)))
+    (let ((identity (unwrap! (get-identity tx-sender) ERR-NOT-FOUND)))
+        (ok (map-set identities tx-sender
+            { name: name,
+              bio: bio,
+              avatar: avatar,
+              social-links: (get social-links identity),
+              created-at: (get created-at identity),
+              updated-at: block-height,
+              verification-level: (get verification-level identity) }))))
 
 (define-public (add-social-link (link (string-utf8 100)))
-    (let ((existing-identity (get-identity tx-sender)))
-        (match existing-identity
-            identity (begin
-                (map-set identities tx-sender
-                    (merge identity
-                        { social-links: (append (get social-links identity) link),
-                          updated-at: block-height }))
-                (ok true))
-            ERR-NOT-FOUND)))
+    (let ((identity (unwrap! (get-identity tx-sender) ERR-NOT-FOUND)))
+        (if (< (len (get social-links identity)) u5)
+            (ok (map-set identities tx-sender
+                { name: (get name identity),
+                  bio: (get bio identity),
+                  avatar: (get avatar identity),
+                  social-links: (unwrap! (as-max-len? (append (get social-links identity) link) u5) ERR-INVALID-INPUT),
+                  created-at: (get created-at identity),
+                  updated-at: block-height,
+                  verification-level: (get verification-level identity) }))
+            ERR-INVALID-INPUT)))
 
 (define-public (verify-identity (user principal) 
                               (proof (string-utf8 500))
@@ -80,7 +76,6 @@
               proof: proof })
         (ok true)))
 
-;; Read-only Functions
 (define-read-only (get-identity (user principal))
     (map-get? identities user))
 
