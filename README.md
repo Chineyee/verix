@@ -1,15 +1,15 @@
 # Verix - Decentralized Identity System
 
-A blockchain-based identity management system built on Stacks, enabling users to create, manage, and verify their digital identities with Bitcoin-level security.
+A blockchain-based identity management system built on Stacks, enabling users to create, manage, verify, and rate digital identities.
 
 ## Features
 
 - Create and manage digital identities
-- Update profile information (name, bio, avatar)
+- Update profile information
 - Add social media links
 - Identity verification system
+- User rating mechanism
 - Time-based verification expiration
-- Multiple verification levels
 
 ## Smart Contract Functions
 
@@ -43,49 +43,53 @@ Adds a social media link to the identity.
 ```
 Verifies an identity with proof and expiration time.
 
+### Rating System
+
+```clarity
+(rate-identity (user principal)
+               (rating uint)
+               (comment (optional (string-utf8 280))))
+```
+Allows users to rate another user's identity.
+
+```clarity
+(update-rating (user principal)
+               (rating uint)
+               (comment (optional (string-utf8 280))))
+```
+Enables updating a previously submitted rating.
+
 ### Read-Only Functions
 
-```clarity
-(get-identity (user principal))
-```
-Returns the identity information for a given user.
+- `get-identity`: Retrieve user identity information
+- `get-verification`: Get verification details
+- `is-verified`: Check verification status
+- `get-rating`: Retrieve a specific rating
+- `get-user-ratings`: Fetch a user's rating information
 
-```clarity
-(get-verification (user principal) (verifier principal))
-```
-Returns verification details.
+## Rating Details
 
-```clarity
-(is-verified (user principal) (verifier principal))
-```
-Checks if a verification is valid and not expired.
+- Rating scale: 1-5 stars
+- Maximum 5 social links per identity
+- Optional comments with ratings
 
 ## Error Codes
 
-- `404`: Entity not found
-- `401`: Unauthorized action
-- `410`: Expired verification
+- `404`: Not found
+- `401`: Unauthorized
+- `410`: Expired
 - `400`: Invalid input
+- `409`: Already rated
 
-## Installation
+## Installation & Development
 
-1. Install the [Stacks CLI](https://docs.stacks.co/cli/get-started)
-2. Clone this repository
-3. Deploy using:
-```bash
-stx deploy verix.clar --network mainnet
-```
-
-## Testing
-
-Run the test suite:
-```bash
-clarinet test
-```
+1. Install Stacks CLI
+2. Clone repository
+3. Deploy: `stx deploy verix.clar --network mainnet`
+4. Test: `clarinet test`
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Submit a pull request
-
+1. Fork repository
+2. Create feature branch
+3. Submit pull request
