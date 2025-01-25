@@ -188,7 +188,8 @@
                             (rating uint)
                             (comment (optional (string-utf8 280))))
     (begin
-        ;; First validate the user exists
+        ;; First validate the user exists and is not the sender
+        (asserts! (not (is-eq tx-sender user)) ERR-UNAUTHORIZED)
         (let ((identity (unwrap! (get-identity user) ERR-NOT-FOUND)))
             ;; Then validate the rating exists
             (let ((existing-rating (unwrap! (map-get? ratings { rater: tx-sender, rated: user }) ERR-NOT-FOUND)))
@@ -199,10 +200,9 @@
                     true) ERR-INVALID-INPUT)
                 
                 ;; Calculate the new rating sum after validation
-                (let ((validated-identity (unwrap! (get-identity user) ERR-NOT-FOUND))
-                      (current-rating (get rating existing-rating))
-                      (current-sum (get rating-sum validated-identity))
-                      (current-total (get total-ratings validated-identity))
+                (let ((current-rating (get rating existing-rating))
+                      (current-sum (get rating-sum identity))
+                      (current-total (get total-ratings identity))
                       (new-sum (+ (- current-sum current-rating) rating)))
                     
                     ;; Update the rating first
@@ -214,16 +214,11 @@
                     
                     ;; Then update the identity with validated data
                     (ok (map-set identities user
-                        { name: (get name validated-identity),
-                          bio: (get bio validated-identity),
-                          avatar: (get avatar validated-identity),
-                          social-links: (get social-links validated-identity),
-                          created-at: (get created-at validated-identity),
-                          updated-at: block-height,
-                          verification-level: (get verification-level validated-identity),
-                          total-ratings: current-total,
-                          rating-sum: new-sum,
-                          average-rating: (calculate-average-rating new-sum current-total) })))))))
+                        (merge identity
+                            { updated-at: block-height,
+                              total-ratings: current-total,
+                              rating-sum: new-sum,
+                              average-rating: (calculate-average-rating new-sum current-total) }))))))))
 
 ;; Read-Only Functions
 (define-read-only (get-identity (user principal))
@@ -245,3 +240,4 @@
 
 (define-read-only (get-user-ratings (user principal))
     (map-get? identities user))
+
